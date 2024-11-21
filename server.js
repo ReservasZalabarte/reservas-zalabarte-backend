@@ -14,12 +14,29 @@ sequelize.authenticate()
   .then(() => console.log('Conexión a la base de datos establecida.'))
   .catch((err) => console.error('Error al conectar con la base de datos:', err));
 
-// Sincronizar modelos
-const Reserva = require('./models/Reserva');
+// Importar modelos
 const Restaurante = require('./models/Restaurante');
+const Mesa = require('./models/Mesa');
+const Reserva = require('./models/Reserva');
+const Turno = require('./models/Turno'); // Importa el modelo Turno
 
-Reserva.sync({ alter: true });
-Restaurante.sync({ alter: true });
+// Definir relaciones entre los modelos
+// Restaurante y Mesas
+Restaurante.hasMany(Mesa, { foreignKey: 'restauranteId' });
+Mesa.belongsTo(Restaurante, { foreignKey: 'restauranteId' });
+
+// Restaurante y Reservas
+Restaurante.hasMany(Reserva, { foreignKey: 'restauranteId' });
+Reserva.belongsTo(Restaurante, { foreignKey: 'restauranteId' });
+
+// Restaurante y Turnos
+Restaurante.hasMany(Turno, { foreignKey: 'restauranteId' });
+Turno.belongsTo(Restaurante, { foreignKey: 'restauranteId' });
+
+// Sincronizar todos los modelos y sus relaciones
+sequelize.sync({ alter: true }) // Usa alter para evitar la pérdida de datos
+  .then(() => console.log('Tablas sincronizadas correctamente'))
+  .catch((err) => console.error('Error al sincronizar tablas:', err));
 
 // Ruta inicial para verificar que el servidor funciona
 app.get('/', (req, res) => {
@@ -30,8 +47,14 @@ app.get('/', (req, res) => {
 const reservasRoutes = require('./routes/reservas');
 app.use('/api/reservas', reservasRoutes); // Endpoints públicos para reservas
 
+const turnosRoutes = require('./routes/turnos'); // Importa las rutas de turnos
+app.use('/api/turnos', turnosRoutes); // Registra las rutas bajo /api/turnos
+
 const restaurantesRoutes = require('./routes/restaurantes');
 app.use('/api/restaurantes', restaurantesRoutes); // Endpoints públicos para restaurantes
+
+const mesasRoutes = require('./routes/mesa'); // Importa las rutas de mesas
+app.use('/api/mesas', mesasRoutes); // Registra las rutas de mesas
 
 // Rutas de autenticación
 const authRoutes = require('./routes/auth'); // Importa las rutas de autenticación

@@ -1,7 +1,5 @@
 const express = require('express');
 const router = express.Router();
-
-// Supongamos que tienes un modelo Restaurante
 const Restaurante = require('../models/Restaurante');
 
 // Endpoint para obtener información de un restaurante

@@ -1,16 +1,17 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
 
-const Restaurante = sequelize.define(
-  'Restaurante',
+const Mesa = sequelize.define(
+  'Mesa',
   {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    nombre: { type: DataTypes.STRING, allowNull: false },
-    ubicacion: { type: DataTypes.STRING, allowNull: false },
+    capacidad: { type: DataTypes.INTEGER, allowNull: false },
+    localizacion: { type: DataTypes.STRING, allowNull: false },
+    restauranteId: { type: DataTypes.INTEGER, allowNull: false },
   },
   {
     timestamps: true, // Habilita createdAt y updatedAt automáticamente
   }
 );
 
-module.exports = Restaurante;
+module.exports = Mesa;
