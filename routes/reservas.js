@@ -24,23 +24,30 @@ router.post('/verificar-turnos', async (req, res) => {
   const { fecha, numeroComensales, restauranteId } = req.body;
 
   try {
+    console.log('Datos recibidos:', { fecha, numeroComensales, restauranteId });
+
+    // Buscar turnos del mismo restaurante y fecha, y con maximoComensales mayor o igual que numeroComensales
     const turnos = await Turno.findAll({
-      where: { restauranteId, fecha },
+      where: {
+        restauranteId,
+        fecha,
+        maximoComensales: { [Op.gte]: numeroComensales },
+      },
     });
+
+    console.log('Turnos encontrados:', turnos);
 
     if (turnos.length === 0) {
-      return res.status(404).json({ mensaje: 'No hay turnos disponibles para esta fecha.' });
+      return res.status(404).json({ mensaje: 'No hay turnos disponibles para esta fecha y número de comensales.' });
     }
 
-    const disponibilidad = turnos.map((turno) => {
-      const mesasDisponibles = turno.maximoComensales >= numeroComensales;
-      return {
-        turno: turno.nombre,
-        horaInicio: turno.horaInicio,
-        horaFin: turno.horaFin,
-        disponible: mesasDisponibles,
-      };
-    });
+    // Preparar respuesta con turnos disponibles
+    const disponibilidad = turnos.map((turno) => ({
+      turno: turno.nombre,
+      horaInicio: turno.horaInicio,
+      horaFin: turno.horaFin,
+      disponible: true,
+    }));
 
     res.json(disponibilidad);
   } catch (error) {
@@ -72,23 +79,28 @@ router.post('/crear', async (req, res) => {
       return res.status(404).json({ mensaje: 'Turno no encontrado.' });
     }
 
+    console.log('Turno encontrado:', turno);
+
     // Verificar mesas disponibles en la localización seleccionada
     const mesasDisponibles = await Mesa.findAll({
       where: {
         restauranteId,
-        id: { [Op.in]: turno.idMesasDisponibles || [] }, // Mesas disponibles en el turno
+        id: { [Op.in]: turno.idMesasDisponibles || [] },
         localizacion,
         capacidad: { [Op.gte]: numeroComensales },
       },
-      order: [['capacidad', 'ASC']], // Ordenar por capacidad ascendente
+      order: [['capacidad', 'ASC']],
     });
+
+    console.log('Mesas disponibles encontradas:', mesasDisponibles);
 
     if (mesasDisponibles.length === 0) {
       return res.status(400).json({ mensaje: 'No hay mesas disponibles en esta localización.' });
     }
 
-    // Asignar la mesa más pequeña
+    // Seleccionar la mesa con menor capacidad
     const mesaAsignada = mesasDisponibles[0];
+    console.log('Mesa asignada:', mesaAsignada);
 
     // Crear la reserva
     const nuevaReserva = await Reserva.create({
@@ -105,12 +117,13 @@ router.post('/crear', async (req, res) => {
       estado: 'confirmado',
     });
 
-    // Actualizar turno
+    // Actualizar los datos del turno
     turno.idMesasDisponibles = turno.idMesasDisponibles.filter((id) => id !== mesaAsignada.id);
-    turno.plazasDisponiblesLoc1 =
-      localizacion === 'loc1' ? turno.plazasDisponiblesLoc1 - mesaAsignada.capacidad : turno.plazasDisponiblesLoc1;
-    turno.plazasDisponiblesLoc2 =
-      localizacion === 'loc2' ? turno.plazasDisponiblesLoc2 - mesaAsignada.capacidad : turno.plazasDisponiblesLoc2;
+    if (localizacion === 'loc1') {
+      turno.plazasDisponiblesLoc1 -= mesaAsignada.capacidad;
+    } else if (localizacion === 'loc2') {
+      turno.plazasDisponiblesLoc2 -= mesaAsignada.capacidad;
+    }
     turno.plazasDisponibles -= mesaAsignada.capacidad;
     turno.maximoComensales = Math.max(turno.plazasDisponiblesLoc1, turno.plazasDisponiblesLoc2);
     turno.estado = turno.plazasDisponibles > 0 ? 'plazas disponibles' : 'lleno';
