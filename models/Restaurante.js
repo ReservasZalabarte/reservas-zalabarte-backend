@@ -10,6 +10,9 @@ const Restaurante = sequelize.define(
   },
   {
     timestamps: true, // Habilita createdAt y updatedAt automáticamente
+    createdAt: 'createdat', // Mapea `createdAt` al nombre en minúsculas
+    updatedAt: 'updatedat', // Mapea `updatedAt` al nombre en minúsculas
+    tableName: 'restaurantes', // Nombre exacto de la tabla
   }
 );
 
